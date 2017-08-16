@@ -24,7 +24,7 @@ def strictly_increasing(L):
     """
     return all(x<y for x, y in zip(L, L[1:]))
 
-class TallyGen:
+class Tally:
     def __init__(self, seg=[1], cos=[1], erg=[10]):
         """ 
         Initialization of the SdefGen module.
