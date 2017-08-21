@@ -111,7 +111,7 @@ class Tally:
         print "fm141 {}".format(norm)
         ArrayPrintForMCNP("fs141",self.seg,"-")
         ArrayPrintForMCNP("sd141",["1",str(len(self.seg))+"R"],"")
-        ArrayPrintForMCNP("sd141",self.erg,"")
+        ArrayPrintForMCNP("e141",self.erg,"")
         
 class SDEF:
     def __init__(self, seg, cos, erg, f141):
