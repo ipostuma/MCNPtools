@@ -2,7 +2,7 @@
 This repo contains python modules and scripts that help managing MCNP simulations and outputs. 
 
 ## read MCTAL
-To easily plot MCNP data, the script *scripts >  TallyRead.py* reads MCTAL files and generates the directory *mOut* containing a file for each implemented MCNP tally. These files are called by their tally name and contain the results separated in 6 columns:
+To easily plot MCNP data the script **scripts >  TallyRead.py** reads MCTAL files, and generates the directory **mOut** containing a file for each implemented MCNP tally. These files are called by their tally name and contain the results separated in 6 columns:
 
 1.  cell number
 2.  segment number
