@@ -13,6 +13,14 @@ To easily plot MCNP data the script **scripts >  TallyRead.py** reads MCTAL file
 
 These files are easily imported with numpy into a python script and subsequently plotted with matplotlib or other plotting libraries.
 
+### Use
+
+The script generates the output directory in the same directory of the MCTAL file, to execute the script type:
+
+```
+.\TallyRead.py PATH\TO\MCTAL
+```
+
 ## examples
 * WriteTally.py -> An example script that uses Gen.Tally module to write a surface current tally
 * WriteSDEF.py  -> An example script that uses Gen.SDEF modulte to write an MCNP SDEF source
