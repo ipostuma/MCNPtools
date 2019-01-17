@@ -18,8 +18,16 @@ These files are easily imported with numpy into a python script and subsequently
 The script generates the output directory in the same directory of the MCTAL file, to execute the script type:
 
 ```
-.\TallyRead.py PATH\TO\MCTAL
+./TallyRead.py ~/PATH/TO/MCTAL
 ```
+
+**NOTE**: it is necessary to define the path of the input starting from the home (*~*) directory.
+
+### Jupyter
+
+To install jupyter notebook please refer to the [installation guide](https://jupyter.org/install). 
+
+The Jupyter notebook example is in **example > JupyterNotebook**, in that directory there is an MCNP input file **mcnp.inp** and the MCTAL output file **mcnp.inpm**. This latter file was read by **./TallyRead.py** into the **example > JupyterNotebook > mOut > f2** file which can be easily used to plot data through the notebook. for more detail open the [notebook](example/JupyterNotebook/Plot%20Tally.ipynb).
 
 ## examples
 * WriteTally.py -> An example script that uses Gen.Tally module to write a surface current tally
