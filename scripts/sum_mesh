@@ -1,0 +1,212 @@
+#!/usr/bin/python
+""" mesh_sum - merge multiple MESH files into one (for MCNP 6.1).
+
+    USAGE:
+        mesh_sum [-o outputFile] infile1 infile2 ... infileN
+    outputFile defaults to "MESHMERGE".
+
+    Unlike the original merge_mesh, this program does not know or care about
+    the details of the MESH format, it just requires that the data it needs
+    are present where it expects them:
+        nps and rnr     last two fields on the first line
+        tally ...       starts a new tally
+        vals            introduces the values and errors of the tally
+        tfc ...         starts the tfc data for the tally (optional)
+    Except for these, the input files must be character-by-character identical
+    (which happens naturally when they are split from one simulation).
+
+    NOTE: LA-UR-08-0249 uses 1/N for the relative error, but merge_mesh uses
+    1/(N-1), so this does not compare exactly with merge_mesh. Tally values
+    do compare, only the relative errors are slightly different; they are
+    close enough for reasonable values of N. I chose to follow LA-UR-08-0249
+    rather than attempt to follow merge_mesh.
+
+    nps and rnr will simply be summed. The vals array for each tally will be
+    combined according to the formulas in LA-UR-08-0249, generalized from 2
+    to N files. The tfc data from the first file will be copied to the output
+    file (as in merge_mesh). This approach handles normal and mesh tallies
+    identically; it doesn't need to know how they are described or laid out
+    because it will simply combine all entries in vals, regardless of how
+    many there are (layout will of course be identical for all files).
+
+    Tally.appendVals() converts from (valuePerHistory, relativeError) to
+    (S1, T1); S1 and T1 can be summed over multiple files; Tally.write()
+    converts back. See LA-UR-08-0249, pp 9-10.
+
+    NOTE: This program requires python 2.6 or later, so either int is
+    automatically promoted to long (2.X), or int is unlimited (3.X). That
+    means MCNP's 8-byte integers can be contained in an int.
+
+    This program may be freely redistributed in accordance with the
+    Gnu Public License, v3 or later.
+"""
+
+from __future__ import print_function
+import sys, os, math
+
+# verify int() can handle 8-byte integers
+if int("3170370370410") != 9876543210*321:
+    print("new_merge_mctal fatal error: need Python 2.6 or later")
+    os._exit(1)
+
+class File:
+    def __init__(self,filename):
+        self.filename = filename
+        self.l1 = ""
+        self.l3 = ""
+        self.lineCheck = ""     # line used to check if same file
+        self.nps = 0            # from line 1
+        self.top = ""           # remainder of top matter until first tally
+        self.tallies = []       # list of tallies
+
+    def read(self):         # used only for input files
+      try:
+        with open(self.filename,"r") as f:
+            try:
+                line = f.readline()
+                self.l1 = line
+                line = f.readline()
+                self.lineCheck = line
+                line = f.readline() # read the first three lines to get nps
+                self.l3 = line
+                cols = line.strip().split()
+                self.nps = float(cols[-1])
+                while True:     # read file top matter before first tally
+                    line = f.readline()
+                    if len(line) == 0: raise Exception() # EOF not valid here
+                    if line.lower().startswith(" mesh"):
+                        break
+                    self.top += line
+                while True:
+                    tally = Tally(line,self.nps)
+                    #print(line)
+                    NL = 0 #new line
+                    self.tallies.append(tally)
+                    while True:     # read tally top matter until vals
+                        line = f.readline()
+                        if line == "\n": NL+=1
+                        if len(line) == 0: raise Exception() # EOF not valid here
+                        tally.top += line
+                        if NL == 2:
+                            line = f.readline()
+                            tally.top += line
+                            break
+                    while True:     # read lines in vals array
+                        line = f.readline()
+                        if len(line) == 0: return # EOF is valid here
+                        if line=="\n":
+                            line = f.readline()
+                            if len(line) == 0: return # EOF is valid here
+                            break # tally ends on next new line
+                        tally.appendVals(line)
+                    #print(line)
+            except Exception as e:
+                print("Format error in '%s' - exiting" % self.filename)
+                print(str(e))
+                os._exit(1)
+      except:
+        print("Cannot read '%s' - exiting" % self.filename)
+        os._exit(1)
+
+    def add(self,file):         # used only for output file
+        if self.nps == 0:
+            self.l1 = file.l1
+            self.l3 = file.l3
+            self.lineCheck = file.lineCheck
+            self.nps = file.nps
+            self.top = file.top
+            self.tallies = file.tallies
+            return
+        if self.lineCheck != file.lineCheck or self.top != file.top or \
+                                        len(self.tallies) != len(file.tallies):
+            print("File '%s' is inconsistent with earlier files" % \
+                                            file.filename)
+            os._exit(1)
+        self.nps += file.nps
+        for i in range(len(self.tallies)):
+            self.tallies[i].add(file.tallies[i])
+
+    def write(self):            # used only for output file
+        with open(self.filename,"w") as f:
+            f.write(self.l1)
+            f.write(self.lineCheck)
+            f.write(self.l3)
+            f.write(self.top)
+            for t in self.tallies:
+                t.write(f)
+
+# class Tally represents one tally
+class Tally:
+    def __init__(self, firstLine, nps):
+        self.nps = nps          # # histories
+        self.top = firstLine    # top matter before vals
+        self.S1 = []            # the vals array
+        self.T1 = []            # the vals array
+        self.PRE = []           # what comes before the values
+        self.tfc = ""           # the tfc lines (if any)
+
+    def appendVals(self,line):      # used only for input files
+        col = line.strip().split()
+        self.PRE.append(col[0:-2]) # read the first columns
+        xbar = float(col[-2])    # mean value per history
+        rerr = float(col[-1])  # relative err
+        S1 = self.nps * xbar
+        T1 = self.nps * xbar * xbar * (self.nps * rerr * rerr + 1)
+        self.S1.append(S1)
+        self.T1.append(T1)
+
+    def add(self,tally):            # used only for output file
+        if self.top != tally.top or len(self.S1) != len(tally.S1):
+            global currentInput
+            col = self.top.split()
+            print("File '%s' has an inconsistent tally %s" % \
+                                                        (currentInput,col[1]))
+            os._exit(1)
+        #self.nps += tally.nps
+        for i in range(len(self.S1)):
+            self.S1[i] += tally.S1[i]
+            self.T1[i] += tally.T1[i]
+
+    def write(self,f):          # used only for output file
+        f.write(self.top)
+        N = self.nps
+        for i in range(len(self.S1)):
+            xbar = self.S1[i] / N
+            if xbar == 0.0:
+                rerr = 0.0
+            else:
+                rerr = math.sqrt((1.0/N)*(self.T1[i]/N - xbar*xbar)) / abs(xbar)
+            for j in self.PRE[i]:
+                f.write("%10s"%j)
+                #if j=="Total":
+                #    j=-1
+                #j=float(j)
+                #if j < 1000 and j > -1000:
+                #    f.write( "%10.3F" % (float(j)))
+                #else :
+                #    f.write( "%10.4e" % (float(j)))
+            f.write("%13.5E%7.4f\n" % (xbar,rerr))
+        f.write("\n")
+
+###
+### main program
+###
+output = File("MESHMERGE")
+currentInput = ""
+
+i = 1   # skip program name
+while i < len(sys.argv):
+    if sys.argv[i] == "-o":
+        i += 1
+        output.filename = sys.argv[i]
+        i += 1
+        continue
+    currentInput = sys.argv[i]
+    file = File(sys.argv[i])
+    file.read()
+    print("mesh_sum read '%s', nps=%d, %d Tallies" % \
+                                     (file.filename,file.nps,len(file.tallies)))
+    output.add(file)
+    i += 1
+
+output.write()
