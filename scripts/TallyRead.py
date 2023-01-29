@@ -25,7 +25,7 @@ def main():
   arguments = parser.parse_args()
 
   if not path.isfile(arguments.mctal):
-    print >> sys.stderr, "mctal2root: File %s does not exist." % arguments.mctal
+    print( sys.stderr, "mctal2root: File %s does not exist." % arguments.mctal)
     return 1
 
   m = MCTAL(arguments.mctal,arguments.verbose)
@@ -33,7 +33,7 @@ def main():
   T = m.Read()
 
   if m.thereAreNaNs:
-    print >> sys.stderr, " \033[1;30mOne or more tallies contain NaN values. Conversion will succeed anyway.\033[0m"
+    print( sys.stderr, " \033[1;30mOne or more tallies contain NaN values. Conversion will succeed anyway.\033[0m")
 
   if arguments.dir == "":
     DirToSave = path.dirname(arguments.mctal)+"/mOut"
@@ -44,7 +44,7 @@ def main():
     makedirs(DirToSave)
 
   if arguments.verbose:
-    print "\n\033[1;34m[Converting...]\033[0m"
+    print("\n\033[1;34m[Converting...]\033[0m")
 
   for tally in T:
 
@@ -128,10 +128,10 @@ def main():
                           file_.write("%i\t\t%02i\t\t%1.4e\t\t\t%1.4e\t\t%1.4e\t%1.4e\n"%(f,seg,cos,erg,res,err*res))
     file_.close()
     if arguments.verbose:
-      print " \033[33mTally %5d saved\033[0m" % (tally.tallyNumber)
+      print(" \033[33mTally %5d saved\033[0m" % (tally.tallyNumber))
 
 
-  print "\n\033[1;34mOut files saved to:\033[1;32m %s\033[0m\n" % (DirToSave)
+  print("\n\033[1;34mOut files saved to:\033[1;32m %s\033[0m\n" % (DirToSave))
 
 
 if __name__ == "__main__":
