@@ -36,7 +36,7 @@ The Jupyter notebook example is in **example > JupyterNotebook**, in that direct
 
 ## Requirements
 
-* Python versione >= 2.7
+* Python versione > 3.0
 * numpy
 * matplotlib
 * [mc-tools](https://github.com/kbat/mc-tools)
